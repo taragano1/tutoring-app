@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  TUTOR
+  ADMIN
+}
+
+enum LessonStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(STUDENT)
+  createdAt    DateTime @default(now())
+
+  subjects       TutorSubject[]
+  availability   Availability[]
+  lessonsTaught  Lesson[] @relation("TutorLessons")
+  lessonsTaken   Lesson[] @relation("StudentLessons")
+}
+
+model Subject {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  tutors  TutorSubject[]
+  lessons Lesson[]
+}
+
+model TutorSubject {
+  tutorId   Int
+  subjectId Int
+  tutor     User    @relation(fields: [tutorId], references: [id])
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  @@id([tutorId, subjectId])
+}
+
+model Availability {
+  id        Int    @id @default(autoincrement())
+  tutorId   Int
+  dayOfWeek Int    // 0 = Sunday ... 6 = Saturday
+  startTime String // "HH:MM"
+  endTime   String // "HH:MM"
+  tutor     User   @relation(fields: [tutorId], references: [id])
+}
+
+model Lesson {
+  id        Int          @id @default(autoincrement())
+  tutorId   Int
+  studentId Int
+  subjectId Int
+  startsAt  DateTime
+  endsAt    DateTime
+  status    LessonStatus @default(PENDING)
+
+  tutor   User    @relation("TutorLessons", fields: [tutorId], references: [id])
+  student User    @relation("StudentLessons", fields: [studentId], references: [id])
+  subject Subject @relation(fields: [subjectId], references: [id])
+
+  @@index([tutorId, startsAt])
+}
