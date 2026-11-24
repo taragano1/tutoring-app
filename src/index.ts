@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import { prisma } from './prisma';
 import { authRouter } from './routes/auth';
+import { requireAuth, requireRole, AuthRequest } from './middleware/auth';
 
 const app = express();
 
@@ -17,7 +18,7 @@ app.get('/subjects', async (_req, res) => {
   res.json(subjects);
 });
 
-app.post('/subjects', async (req, res) => {
+app.post('/subjects', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const { name } = req.body;
   if (!name) {
     res.status(400).json({ error: 'name is required' });
@@ -25,6 +26,18 @@ app.post('/subjects', async (req, res) => {
   }
   const subject = await prisma.subject.create({ data: { name } });
   res.status(201).json(subject);
+});
+
+app.get('/me', requireAuth, async (req: AuthRequest, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: { id: true, name: true, email: true, role: true },
+  });
+  if (!user) {
+    res.status(404).json({ error: 'user not found' });
+    return;
+  }
+  res.json(user);
 });
 
 const PORT = process.env.PORT || 3000;
