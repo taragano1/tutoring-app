@@ -1,11 +1,12 @@
 import 'dotenv/config';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
+import { authRouter } from './routes/auth';
 
 const app = express();
-const prisma = new PrismaClient();
 
 app.use(express.json());
+app.use('/auth', authRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
